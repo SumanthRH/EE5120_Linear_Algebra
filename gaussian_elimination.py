@@ -1,17 +1,7 @@
 import numpy as np
 import argparse
 import sys
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--array',default = np.asarray([[1,2,3],[2,3,4]]),type = np.ndarray,
-# help = 'Input Matrix to be reduced')
-# args = parser.parse_args()
-# a = args.array
 
-
-# M = [[0,1,-1,2,0],[1,0,1,2,-1],[0,0,0,1,0],[1,1,0,5,-1]]
-# M = [[1,2,-1,0],[0,3,1,4],[-1,1,2,4],[2,3,1,5]]
-M = [[2,2,3]]
-M = np.asarray(M,dtype=np.float32)
 
 ''' Lets put down the algorithm first!
     1) Start at (0,0)  look for a non zero element in 0th column, swap rows if neccessary
@@ -20,6 +10,7 @@ M = np.asarray(M,dtype=np.float32)
     3) Move to (1,1). Repeat above procedure. Similarly for the rest
     4) If no nonzero elemment is present at and below the (i,i)th element, skip the column
 '''
+
 def swap_rows(M,a_ind,b_ind):
     '''' Swaps two rows of a numpy array'''
     M[[a_ind,b_ind]] = M[[b_ind,a_ind]]
@@ -37,35 +28,30 @@ def check_zero_rows(M):
 def check_nz_col(M, col_ind,row_ind):
     ''' Checks if column col indexed with col_ind of matrix M has a non zero value at index row_ind 
         Swaps rows from below incase  col[row_ind] = 0
-        returns None matrixif no non zero value at index ind exists
-        Else, returns  M with entry 1 at desired index and the corresponding column
+        Skips a column if no non zero value exists at and below row_ind. If such a column is the last one,
+        then it returns the matrix unchanged.
+        Else, returns  M with entry 1 at desired index and the corresponding column index
     '''
     col = M[:,col_ind]
     if col[row_ind] != 0 : 
-        print('diving by %d'%col[row_ind])
-        M[row_ind] = M[row_ind]*1.0/float(col[row_ind])
-        print('Column directly given out')
-        print('After normalizing :',M)
+        #Normalize by diving by the value at row_ind
+        M[row_ind] = M[row_ind]/col[row_ind]
         return M,col_ind
     elif col[row_ind:].any() != 0:
-        print('Rows swapped')
+        #If any non zero value exists below given index row_ind, swap rows
         nz_inds = np.asarray(np.nonzero(col))
-        # print(nz_inds)
         nz_ind = nz_inds[nz_inds > row_ind][0]
         M = swap_rows(M,row_ind,nz_ind)
-        # print(M)
-        M[row_ind] = M[row_ind]*1.0/float(M[row_ind,col_ind])
+        M[row_ind] = M[row_ind]/M[row_ind,col_ind]
         return M,col_ind
     else :
         #Case when the col has no non zero entry at and beyond row_ind
         if col_ind == M.shape[1]-1:
-            print('Last column reached')
-            return M,None
-        print('Skipping one column')
+            return M,None # case when no further simplification is possible
+        # Skip one column 
         return check_nz_col(M,col_ind+1,row_ind)
         
 def reduce_rows_below(M,col_ind,row_ind):
-    # print(np.transpose(M[row_ind+1:,col_ind]).shape)
     M[row_ind+1:,:] = M[row_ind+1:,:] - (np.expand_dims(M[row_ind+1:,col_ind],axis=1))*M[row_ind]
     return M
 
@@ -88,19 +74,29 @@ def GE(M):
         if row_ind >= M.shape[1] or row_ind >= M.shape[0]:
             return M
         M,col_ind = check_nz_col(M,col_ind,row_ind)
-        print('After column choosing :\n' ,M)
+        # print('After column choosing :\n' ,M)
         if col_ind == None :
             return M
         M = reduce_rows_below(M,col_ind,row_ind)
-        print('Row reduction : \n',M)
+        # print('Row reduction : \n',M)
         col_ind +=1
         row_ind += 1
-    print('This')
     return M
 
-
-# print('Input array :\n {}'.format(M))
-print(GE(M))
+if __name__ == '__main__':  
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--array',default = '1,2,3.2,3,4',type = str,
+    help = 'Input Matrix to be reduced in a11,a12,a13.a21,a22,a23.... format')
+    args = parser.parse_args()
+    array = args.array 
+    array = array.split('.')
+    array = [a.split(',') for a in array]
+    # M = [[0,1,-1,2,0],[1,0,1,2,-1],[0,0,0,1,0],[1,1,0,5,-1]]
+    # M = [[1,2,-1,0],[0,3,1,4],[-1,1,2,4],[2,3,1,5]]
+    # M = [[2,2,3]]
+    M = np.asarray(array,dtype=np.float32)
+    print('Input matrix :\n {}'.format(M))
+    print('Matrix after Gaussian Elimination :\n {}' .format(GE(M)))
 
 
 
